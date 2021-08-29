@@ -1,0 +1,13 @@
+<hr>
+<ul class="nav nav-pills flex-column">
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_page == 'dashboard' else '' }}" href="/"><i class="fas fa-bookmark"></i> Dashboard</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_page == 'alerts' else '' }}" href="/myAlerts"><i class="fas fa-exclamation-circle"></i> My alerts</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link {{ 'active' if active_page == 'settings' else '' }}" href="/settings"><i class="fas fa-cogs"></i> Settings</a>
+    </li>
+</ul>
+<hr>

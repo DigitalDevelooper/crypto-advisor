@@ -1,0 +1,350 @@
+{% extends 'main_template.html' %}
+{% set active_page = "dashboard" %}
+{% block body %}
+<div id="loader"></div>
+<div class="bg-primary" style="height: 10px;width: 100%;"></div>
+<div class="row" style="margin-left: 20px;">
+    <div class="col-2">
+        <div class="card border-primary mb-3 mt-4">
+            <div class="card-header">
+                <h5 class="text-black text-center align-middle">CRYPTO ADVISOR</h5>
+            </div>
+            <div class="card-body">
+                <div class="user mt-2 mb-4">
+                    <h2 class="text-primary">Hello, {{username}}!</h2>
+                </div>
+                {% include 'includes/_navbar.html' %}
+            </div>
+        </div>
+    </div>
+
+    <div id="infoGraph" class="col-9">
+        <div class="card border-light mb-3 mt-4">
+            <div class="card-header">
+                <h5>{{crypto}}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-xl-12 col-sm-12">
+                        <div class="card">
+                        <div class="card-body p-3">
+                            <div class="row">
+                                <canvas id="myChart{{crypto_short}}" class="mt-4" width="600" height="200"></canvas>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div id="alert" class="col-xl-6 col-sm-6">
+                        <div class="card">
+                        <div class="card-body p-3">
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="numbers">
+                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">Alert</p>
+                                    <h5 class="font-weight-bolder mb-0">
+                                        <span >Set alert</span> 
+                                    </h5>
+                                    </div>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <div class="icon icon-shape bg-gradient-BTC shadow text-center border-radius-md">
+                                    <i class="ni fas fa-bell"></i>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    <div id="prediction" class="col-xl-6 col-sm-6">
+                        <div class="card">
+                        <div class="card-body p-3">
+                            <div class="row">
+                                <div class="col-8">
+                                    <div class="numbers">
+                                    <p class="text-sm mb-0 text-capitalize font-weight-bold">{{crypto_short}}</p>
+                                    <h5 class="font-weight-bolder mb-0">
+                                        <span id="ccValue{{crypto_short}}">Prediction</span> 
+                                    </h5>
+                                    </div>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <div class="icon icon-shape bg-gradient-LTC shadow text-center border-radius-md">
+                                    <i class="ni fas fa-magic"></i>
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="predictionGraph" style="display:none;" class="col-12">
+            <div class="card border-light mb-3 mt-4">
+                <div class="card-header">
+                    <h5>{{crypto}} prediction</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-xl-12 col-sm-12">
+                            <div class="card">
+                            <div class="card-body p-3">
+                                <div class="row">
+                                    <canvas id="myPredictionChart{{crypto_short}}" class="mt-4" width="600" height="200"></canvas>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-4">
+                        <div class="alert alert-dismissible alert-info">
+                            <p id="infoText" class="mb-0"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exampleModalLabel">Set alert for {{crypto_short}}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <fieldset>
+                <div class="form-group">
+                    <label for="alertCondition" class="form-label mt-4">Alert if price is:</label>
+                    <select id="alertCondition" class="form-select">
+                        <option value=">=">>=</option>
+                        <option value="<="><=</option>
+                    </select>
+                </div>
+            </fieldset>
+            <fieldset>
+                <div class="form-group">
+                    <label for="alertPrice" class="form-label mt-4">than $:</label>
+                    <input type="number" class="form-control" id="alertPrice">
+                  </div>
+            </fieldset>
+        </div>
+        <div class="modal-footer justify-content-between">
+          <button type="button" class="btn bg-gradient-dark" data-bs-dismiss="modal">Close</button>
+          <button id="btnSetAlert" type="button" class="btn bg-gradient-BTC text-white">Set alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<div id="infoBox"></div>
+{% endblock %}
+{% block js %}
+    <script>
+        jsonString = "{{cryptoData}}".replaceAll('&#34;','"');
+        jsonData = JSON.parse(jsonString);
+        value = [];
+        label = [];
+        jsonData.forEach(element => proccessElement(element));
+        var ctx = document.getElementById('myChart{{crypto_short}}').getContext('2d');
+        myChart{{crypto_short}} = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: "Value",
+                    data: value,
+                    borderColor: "#3459e6"
+                }],
+                labels: label
+            },
+            options: {
+                elements: {
+                    point:{
+                        //radius: 0
+                    }
+                },
+                scales: {
+                    x: {
+                        /*grid: {
+                            display: false,
+                            drawBorder: false,
+                            drawOnChartArea: false,
+                            drawTicks: false
+                        },
+                        display:false*/
+
+                    },
+                    y: {
+                        /*grid: {
+                            display: false,
+                            drawBorder: false,
+                            drawOnChartArea: false,
+                            drawTicks: false
+                        },
+                        display:false*/
+
+                    },
+                },
+                plugins:{
+                    legend:{
+                        display:false
+                    }
+                }
+            }
+        });
+        function proccessElement(element){
+            datum = new Date(element.Date);
+            dd = datum.getDate();
+            mm = datum.getMonth() + 1;
+            yyyy = datum.getFullYear();
+            datumNovi = `${dd}.${mm}.${yyyy}`;
+            value.push(element.Open);
+            label.push(datumNovi);
+        }
+        function proccessElementPrediction(element){
+            datum = new Date(element.ds);
+            dd = datum.getDate();
+            mm = datum.getMonth() + 1;
+            yyyy = datum.getFullYear();
+            datumNovi = `${dd}.${mm}.${yyyy}`;
+            value.push(element.yhat);
+            label.push(datumNovi);
+        }
+        $("#alert").on("click", function(){
+            $("#alertModal").modal('show');
+        });
+        
+        $("#prediction").on("click", function(){
+            showLoader();
+            if(typeof(myPredicitonChart{{crypto_short}}) != 'undefined'){
+                myPredicitonChart{{crypto_short}}.destroy();
+            }
+            var data = {
+                crypto: '{{crypto_short}}-USD'
+            };
+            fetch(`${window.origin}/predict`, {
+                method: "POST",
+                credentials: "include",
+                body: JSON.stringify(data),
+                cache: "no-cache",
+                headers: new Headers({
+                    "content-type": "application/json"
+                })
+            })
+            .then(function (response) {
+                response.json().then(function (data) {
+                    jsonStringPrediction = data.json.replaceAll('&#34;','"');
+                    jsonDataPrediction = JSON.parse(jsonStringPrediction);
+                    value = [];
+                    label = [];
+                    jsonDataPrediction.forEach(element => proccessElementPrediction(element));
+                    minValue = jsonDataPrediction[jsonDataPrediction.length-365].yhat;
+                    maxValue = jsonDataPrediction[jsonDataPrediction.length-365].yhat;
+                    maxIndex = 0;
+                    minIndex = 0;
+                    for(i=jsonDataPrediction.length-365; i<jsonDataPrediction.length; i++){
+                        datum = jsonDataPrediction[i].ds;
+                        predictedValue = jsonDataPrediction[i].yhat;
+                        predictedValue > maxValue ? maxIndex=i : (predictedValue < minValue ? minIndex = i : "");
+                        predictedValue > maxValue ? maxValue=predictedValue : (predictedValue < minValue ? minValue = predictedValue : "");
+                    }
+                    pValue = value.slice(value.length-365, value.length);
+                    pLabel = label.slice(label.length-365, label.length);
+                    $("#infoText").html(`Ukoliko kupite {{crypto_short}} na dan ${label[minIndex]} kada će iznosti $${minValue.toFixed(2)} te ga prodate na dan ${label[maxIndex]} kada će iznositi $${maxValue.toFixed(2)} moguće je ostvariti profit od ${((maxValue-minValue)/minValue*100).toFixed(2)}%`);
+                    var ctxPrediction = document.getElementById('myPredictionChart{{crypto_short}}').getContext('2d');
+                    myPredicitonChart{{crypto_short}} = new Chart(ctxPrediction, {
+                        type: 'line',
+                        data: {
+                            datasets: [{
+                                label: "Value",
+                                data: pValue,
+                                borderColor: "#3459e6"
+                            }],
+                            labels: pLabel
+                        },
+                        options: {
+                            elements: {
+                                point:{
+                                    radius: 0
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    /*grid: {
+                                        display: false,
+                                        drawBorder: false,
+                                        drawOnChartArea: false,
+                                        drawTicks: false
+                                    },
+                                    display:false*/
+
+                                },
+                                y: {
+                                    /*grid: {
+                                        display: false,
+                                        drawBorder: false,
+                                        drawOnChartArea: false,
+                                        drawTicks: false
+                                    },
+                                    display:false*/
+
+                                },
+                            },
+                            plugins:{
+                                legend:{
+                                    display:false
+                                }
+                            }
+                        }
+                    });
+                    hideLoader();
+                })
+            })
+        });
+        function hideLoader() {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("infoGraph").style.display = "block";
+            document.getElementById("predictionGraph").style.display = "block";
+        }
+        function showLoader(){
+            document.getElementById("loader").style.display = "block";
+            document.getElementById("infoGraph").style.display = "none";
+        }
+        $("#btnSetAlert").on("click", function (e) {
+            e.preventDefault();
+            var condition = document.getElementById('alertCondition').value;
+            var price = document.getElementById('alertPrice').value;
+            var data = {
+                condition: condition,
+                price: price,
+                crypto: '{{crypto_short}}'
+            };
+
+            fetch(`${window.origin}/newAlert`, {
+                method: "POST",
+                credentials: "include",
+                body: JSON.stringify(data),
+                cache: "no-cache",
+                headers: new Headers({
+                    "content-type": "application/json"
+                })
+            })
+            .then(function (response) {
+                response.json().then(function (data) {
+                    $("#alertModal").modal('hide');
+                    infoDiv = ` <div class="alert alert-dismissible alert-${data.color}">
+                                    <p id="infoText" class="mb-0">${data.message}</p>
+                                </div>`;
+                    $("#infoBox").html(infoDiv);
+                    $('#infoBox').fadeIn();
+                    var hideTimeout = 3000;
+                    setTimeout(function () {
+                        $('#infoBox').fadeOut();
+                    }, hideTimeout);
+                })
+            })
+        });
+    </script>
+{% endblock %}

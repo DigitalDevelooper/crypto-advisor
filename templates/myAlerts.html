@@ -1,0 +1,50 @@
+{% extends 'main_template.html' %}
+{% set active_page = "alerts" %}
+{% block body %}
+<div class="bg-primary" style="height: 10px;"></div>
+<div class="row" style="margin-left: 20px;">
+    <div class="col-2">
+        <div class="card border-primary mb-3 mt-4">
+            <div class="card-header">
+                <h5 class="text-black text-center align-middle">CRYPTO ADVISOR</h5>
+            </div>
+            <div class="card-body">
+                <div class="user mt-2 mb-4">
+                    <h2 class="text-primary">Hello, {{username}}!</h2>
+                </div>
+                {% include 'includes/_navbar.html' %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-9">
+        <div class="card border-light mb-3 mt-4">
+            <div class="card-header">
+                <h5>Alerts</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th scope="col">#ID</th>
+                            <th scope="col">Valuta</th>
+                            <th scope="col">Uvjet</th>
+                            <th scope="col">Aler @</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblMyAlerts">
+                        {% for alert in alerts %}
+                            <tr>
+                                <td>{{alert['id']}}</td>
+                                <td>{{alert['name_short']}}</td>
+                                <td>{{alert['alert_price_condition']}}</td>
+                                <td>{{alert['alert_price']}}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,388 @@
+{% extends 'main_template.html' %}
+{% set active_page = "dashboard" %}
+{% block body %}
+<div class="bg-primary" style="height: 10px;width: 100%;"></div>
+<div class="row" style="margin-left: 20px;">
+    <div class="col-2">
+        <div class="card border-primary mb-3 mt-4">
+            <div class="card-header">
+                <h5 class="text-black text-center align-middle">CRYPTO ADVISOR</h5>
+            </div>
+            <div class="card-body">
+                <div class="user mt-2 mb-4">
+                    <h2 class="text-primary">Hello, {{username}}!</h2>
+                </div>
+                {% include 'includes/_navbar.html' %}
+            </div>
+        </div>
+        <div class="card border-primary mb-3 mt-4">
+            <div class="card-header">
+                <h5 class="text-black text-center align-middle"><i class="fas fa-bell"></i> Notifications</h5>
+            </div>
+            <div class="card-body">
+                {% if dailyAlerts == 1 %}
+                    <div class="row">
+                        <div id="dailyAlertBox" class="col-12 mt-4">
+                        </div>
+                    </div> 
+                    {% endif %}
+                    <div class="row">
+                        <div id="priceAlertBox" class="col-12 mt-4">
+                        </div>
+                    </div> 
+            </div>
+        </div>
+    </div>
+
+    <div class="col-9">
+        <div class="card border-light mb-3 mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-binoculars"></i> Watchlist</h5>
+            </div>
+            <div class="card-body">
+                {% if message == 'nema podataka' %}
+                    <p>Malo je pusto ovdje. Zašto nebi dodao valutu za početak?</p>
+                {% else %}
+                    <div class="row">
+                        {% for crypto in cryptoData %}
+                            <div id="clk{{crypto['name_short']}}" class="col-xl-6 col-sm-6">
+                                <div class="card">
+                                <div class="card-body p-3">
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <div class="numbers">
+                                            <p class="text-sm mb-0 text-capitalize font-weight-bold">{{crypto['name_short']}}</p>
+                                            <h5 class="font-weight-bolder mb-0">
+                                                <span id="ccValue{{crypto['name_short']}}"></span> 
+                                                <span id="percentDiff{{crypto['name_short']}}" class="text-sm font-weight-bolder"></span>
+                                            </h5>
+                                            </div>
+                                        </div>
+                                        <div class="col-4 text-end">
+                                            <div class="icon icon-shape bg-gradient-{{crypto['name_short']}} shadow text-center border-radius-md">
+                                            <i class="ni {{crypto['icon']}}"></i>
+                                        </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-xl-12 col-sm-12">
+                                                <canvas id="myChart{{crypto['name_short']}}" class="mt-4" width="400" height="100"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                {% endif %}
+            </div>
+        </div>
+        <div class="card border-light mb-3 mt-4">
+            <div class="card-header">
+                <h5><i class="fab fa-docker"></i> Latest whales transfers</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th scope="col">Blockchain</th>
+                                <th scope="col">Valuta</th>
+                                <th scope="col">Iznos u valuti</th>
+                                <th scope="col">Iznos u $</th>
+                                <th scope="col">Tip</th>
+                                <th scope="col">From</th>
+                                <th scope="col">To</th>
+                                <th scope="col">Datum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblWhalesAlerts">
+                        </tbody>
+                    </table>
+                </div>  
+            </div>
+        </div>
+    </div>
+</div>
+<div id="infoBox"></div>
+</div>
+{% endblock %}
+{% block js %}
+    <script>
+        {% for crypto in cryptoData %}
+            $("#clk{{crypto['name_short']}}").on("click", function(){
+                window.location.href = '/cryptoDetails/{{crypto['name_short']}}-USD'
+            });
+            var data{{crypto["name_short"]}} = {};
+            data{{crypto["name_short"]}}.crypto = "{{crypto["name_short"]}}";
+            
+            {% if dailyAlerts == 1 %}
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    url: "http://develooper.tk/cct/getDaily.php",
+                    data: { crypto:JSON.stringify(data{{crypto["name_short"]}})},
+                    success: function(data) {
+                        var priceDiffCondition = 5;
+                        datum = new Date();
+                        dd = datum.getDate();
+                        mm = datum.getMonth() + 1;
+                        yyyy = datum.getFullYear();
+                        hh = datum.getHours();
+                        hh < 10 ? hh = "0"+hh : hh=hh;
+                        min = datum.getMinutes();
+                        min < 10 ? min = "0"+min : min=min;
+                        sec = datum.getSeconds();
+                        sec < 10 ? sec = "0"+sec : sec=sec;
+                        datumNovi = `@${dd}.${mm}.${yyyy} ${hh}:${min}:${sec}`;
+                        if (Math.abs(parseFloat(data.diff.toFixed(2))) > priceDiffCondition){
+                            if (parseFloat(data.diff.toFixed(2)) < 0){
+                                alert = `
+                                    <div class="alert alert-dismissible alert-danger">
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        <strong>${datumNovi}</strong> {{crypto['name_short']}} is down by ${data.diff.toFixed(2)}%
+                                    </div>
+                                `;
+                            }
+                            if (parseFloat(data.diff.toFixed(2)) > 0){
+                                alert = `
+                                    <div class="alert alert-dismissible alert-success">
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                        <strong>${datumNovi}</strong> {{crypto['name_short']}} is up by +${data.diff.toFixed(2)}%
+                                    </div>
+                                `;
+                            }
+                            $("#dailyAlertBox").append(alert);
+                        }
+                    }/*,
+                    complete: function(){
+                        setInterval(function(){ 
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                url: "http://develooper.tk/cct/getHourly.php",
+                                data: { crypto:JSON.stringify(data{{crypto["name_short"]}})},
+                                success: function (data) {
+                                }
+                            });
+                        }, 30000);
+                    }*/
+                });
+            {% endif %}
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                url: "http://develooper.tk/cct/getHourly.php",
+                data: { crypto:JSON.stringify(data{{crypto["name_short"]}})},
+                success: function (data) {
+                    var ctx = document.getElementById('myChart{{crypto['name_short']}}').getContext('2d');
+                    myChart{{crypto['name_short']}} = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            datasets: [{
+                                label: "Value",
+                                data: data.value,
+                                borderColor: "{{crypto['color']}}"
+                            }],
+                            labels: data.date
+                        },
+                        options: {
+                            elements: {
+                                point:{
+                                    radius: 0
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        display: false,
+                                        drawBorder: false,
+                                        drawOnChartArea: false,
+                                        drawTicks: false
+                                    },
+                                    display:false
+
+                                },
+                                y: {
+                                    grid: {
+                                        display: false,
+                                        drawBorder: false,
+                                        drawOnChartArea: false,
+                                        drawTicks: false
+                                    },
+                                    display:false
+
+                                },
+                            },
+                            plugins:{
+                                legend:{
+                                    display:false
+                                }
+                            }
+                        }
+                    });
+                    prije = data.value[0];
+                    trenutno = data.value[data.value.length-1];
+                    postotak = ((trenutno-prije)/prije)*100;
+                    if(postotak >= 0){
+                        $("#percentDiff{{crypto['name_short']}}").html(`<span class="text-success">+${postotak.toFixed(2)}%</span>`);
+                    }
+                    else $("#percentDiff{{crypto['name_short']}}").html(`<span class="text-danger">${postotak.toFixed(2)}%</span>`);
+                    $("#ccValue{{crypto['name_short']}}").html(`$${data.value[data.value.length-1]}`);
+                },
+                complete: function(){
+                    setInterval(function(){ 
+                        $.ajax({
+                            type: "POST",
+                            dataType: "json",
+                            url: "http://develooper.tk/cct/getHourly.php",
+                            data: { crypto:JSON.stringify(data{{crypto["name_short"]}})},
+                            success: function (data) {
+                                for(i=0;i<data.value.length;i++){
+                                    myChart{{crypto['name_short']}}.data.datasets[0].data[i] = data.value[i];
+                                    myChart{{crypto['name_short']}}.data.labels[i] = data.date[i];
+                                }
+                                myChart{{crypto['name_short']}}.update();
+                                prije = data.value[0];
+                                trenutno = data.value[data.value.length-1];
+                                postotak = ((trenutno-prije)/prije)*100;
+                                if(postotak >= 0){
+                                    $("#percentDiff{{crypto['name_short']}}").html(`<span class="text-success">+${postotak.toFixed(2)}%</span>`);
+                                }
+                                else $("#percentDiff{{crypto['name_short']}}").html(`<span class="text-danger">${postotak.toFixed(2)}%</span>`);
+                                $("#ccValue{{crypto['name_short']}}").html(`$${data.value[data.value.length-1]}`);
+                            },
+                            complete: function(){
+                                updateCC(trenutno, "{{crypto["name_short"]}}");
+                            }
+                        });
+                    }, 30000);
+                }
+            });
+        {% endfor%}
+            jsonString = "{{response}}".replaceAll('&#34;','"');
+            jsonString = jsonString.replaceAll('b&#39;','');
+            jsonString = jsonString.replaceAll('&#39;','');
+            jsonData = JSON.parse(jsonString);
+            transakcije = jsonData.transactions;
+            $("#tblWhalesAlerts").html('');
+            transakcije.forEach(element => {
+                datum = element.timestamp + "000";
+                datum = new Date(parseInt(datum));
+                dd = datum.getDate();
+                mm = datum.getMonth() + 1;
+                yyyy = datum.getFullYear();
+                hh = datum.getHours();
+                hh < 10 ? hh = "0"+hh : hh=hh;
+                min = datum.getMinutes();
+                min < 10 ? min = "0"+min : min=min;
+                sec = datum.getSeconds();
+                sec < 10 ? sec = "0"+sec : sec=sec;
+                datumNovi = `${dd}.${mm}.${yyyy} ${hh}:${min}:${sec}`;
+                table = `
+                    <tr>
+                        <td>${element.blockchain}</td>
+                        <td>${element.symbol}</td>
+                        <td>${element.amount.toFixed(2)}</td>
+                        <td>${element.amount_usd.toFixed(2)}</td>
+                        <td>${element.transaction_type}</td>
+                        <td>${element.from.owner_type}</td>
+                        <td>${element.to.owner_type}</td>
+                        <td>${datumNovi}</td>
+                    </tr>
+                `;
+                $("#tblWhalesAlerts").prepend(table);
+            });
+            // set interval for new alerts
+            setInterval(function(){ 
+                fetch(`${window.origin}/whalesAlert`, {
+                    method: "POST",
+                    credentials: "include",
+                    body: "",
+                    cache: "no-cache",
+                    headers: new Headers({
+                        "content-type": "application/json"
+                    })
+                })
+                .then(function (response) {
+                    response.json().then(function (data) {
+                        transakcije = data.transactions;
+                        $("#tblWhalesAlerts").html('');
+                        transakcije.forEach(element => {
+                            datum = element.timestamp + "000";
+                            datum = new Date(parseInt(datum));
+                            dd = datum.getDate();
+                            mm = datum.getMonth() + 1;
+                            yyyy = datum.getFullYear();
+                            hh = datum.getHours();
+                            min = datum.getMinutes();
+                            min < 10 ? min = "0"+min : min=min;
+                            sec = datum.getSeconds();
+                            sec < 10 ? sec = "0"+sec : sec=sec;
+                            datumNovi = `${dd}.${mm}.${yyyy} ${hh}:${min}:${sec}`;
+                            table = `
+                                <tr>
+                                    <td>${element.blockchain}</td>
+                                    <td>${element.symbol}</td>
+                                    <td>${element.amount.toFixed(2)}</td>
+                                    <td>${element.amount_usd.toFixed(2)}</td>
+                                    <td>${element.transaction_type}</td>
+                                    <td>${element.from.owner_type}</td>
+                                    <td>${element.to.owner_type}</td>
+                                    <td>${datumNovi}</td>
+                                </tr>
+                            `;
+                            $("#tblWhalesAlerts").prepend(table);
+                        }); 
+                    })
+                })
+            }, 10000);
+            function updateCC(trenutno, crypto){
+                var data = {
+                    trenutno: trenutno,
+                    crypto: crypto
+                };
+                fetch(`${window.origin}/updateCrypto`, {
+                    method: "POST",
+                    credentials: "include",
+                    body: JSON.stringify(data),
+                    cache: "no-cache",
+                    headers: new Headers({
+                        "content-type": "application/json"
+                    })
+                })
+                .then(function (response) {
+                    response.json().then(function (response) {
+                        if(response.alerts == "ima" && response.message == "success"){
+                            fetch(`${window.origin}/checkAlerts`, {
+                                method: "POST",
+                                credentials: "include",
+                                body: JSON.stringify(data),
+                                cache: "no-cache",
+                                headers: new Headers({
+                                    "content-type": "application/json"
+                                })
+                            })
+                            .then(function (response) {
+                                response.json().then(function (alerts) {
+                                    if(alerts.alerts.length > 0){
+                                        alerts.alerts.forEach(element => {
+                                            alert = `
+                                                <div class="alert alert-dismissible alert-info">
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                    <strong><i class="ni fas fa-bell"></i> </strong> ${element}
+                                                </div>
+                                            `;
+                                            $("#priceAlertBox").append(alert);
+                                        })
+                                    } 
+                                })
+                            })
+                        }
+                    })
+                })
+            }
+    </script>
+{% endblock %}
